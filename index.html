@@ -464,6 +464,29 @@
       console.log('Drop your sticker logic in the TODO sections above!');
     })();
   </script>
+<script>
+    const canvas = document.querySelector('.canvas');
+
+    // 1. 允许拖拽进入
+    canvas.addEventListener('dragover', (e) => e.preventDefault());
+
+    // 2. 处理拖拽放下
+    canvas.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = document.createElement('img');
+                img.src = event.target.result;
+                img.style.width = '100px'; // 设置贴纸初始大小
+                img.style.position = 'absolute'; // 允许定位
+                canvas.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+</script>
 
 </body>
 </html>
