@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zoeye Wallpaper Builder - Y2K</title>
+  <style>
+    /* ===== Reset & Base ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Courier New', 'MS Gothic', 'Pixelated MS Sans Serif', monospace;
+      background: #FF00FF;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      /* Retro Y2K background pattern */
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+      background-size: 16px 16px;
+    }
+
+    /* ===== Windows 98 Main Window ===== */
+    .win98-window {
+      width: 100%;
+      max-width: 820px;
+      border: 2px solid;
+      border-color: #FFFFFF #808080 #808080 #FFFFFF;
+      box-shadow: 4px 4px 0px rgba(0,0,0,0.3);
+      background: #C0C0C0;
+      font-size: 14px;
+    }
+
+    /* Title Bar */
+    .win98-titlebar {
+      background: linear-gradient(90deg, #000080, #1084D0);
+      color: #FFFFFF;
+      padding: 4px 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: bold;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      user-select: none;
+    }
+
+    .win98-titlebar .title-text {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .win98-titlebar .title-text::before {
+      content: "🖼";
+      font-size: 15px;
+    }
+
+    .win98-titlebar .win98-buttons {
+      display: flex;
+      gap: 2px;
+    }
+
+    .win98-titlebar .win98-buttons button {
+      width: 18px;
+      height: 18px;
+      font-size: 11px;
+      line-height: 1;
+      text-align: center;
+      background: #C0C0C0;
+      border: 1px solid;
+      border-color: #FFFFFF #808080 #808080 #FFFFFF;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #000;
+    }
+
+    .win98-titlebar .win98-buttons button:active {
+      border-color: #808080 #FFFFFF #FFFFFF #808080;
+    }
+
+    .win98-titlebar .win98-buttons .btn-close {
+      background: #C0C0C0;
+      color: #000;
+      font-size: 12px;
+    }
+
+    /* Menu Bar */
+    .win98-menubar {
+      background: #C0C0C0;
+      padding: 2px 4px;
+      border-bottom: 1px solid #808080;
+      display: flex;
+      gap: 2px;
+    }
+
+    .win98-menubar span {
+      padding: 2px 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .win98-menubar span:hover {
+      background: #000080;
+      color: #FFFFFF;
+    }
+
+    /* ===== Main Content Area ===== */
+    .win98-content {
+      display: flex;
+      flex-direction: row;
+      gap: 0;
+      padding: 10px;
+      background: #C0C0C0;
+      min-height: 400px;
+    }
+
+    /* ===== Left Sidebar ===== */
+    .sidebar {
+      width: 200px;
+      min-width: 200px;
+      background: #FFFFFF;
+      border: 2px inset #808080;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      font-weight: bold;
+      color: #000080;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #C0C0C0;
+    }
+
+    .sidebar-asset-hint {
+      font-size: 11px;
+      color: #808080;
+      text-align: center;
+      padding: 20px 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .sidebar-asset-hint .hint-icon {
+      font-size: 28px;
+      opacity: 0.5;
+    }
+
+    /* ===== Right Canvas Area ===== */
+    .canvas-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+    }
+
+    #wallpaper-canvas {
+      width: 375px;
+      height: 667px;
+      background: #000000;
+      border: 2px solid;
+      border-color: #808080 #FFFFFF #FFFFFF #808080;
+      position: relative;
+      overflow: hidden;
+      cursor: crosshair;
+      /* This canvas is the sticker drop zone */
+    }
+
+    /* Inner pixel grid hint (optional subtle effect) */
+    .canvas-pixel-hint {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 10px 10px;
+      pointer-events: none;
+    }
+
+    /* ===== Status Bar ===== */
+    .win98-statusbar {
+      background: #C0C0C0;
+      border-top: 1px solid #808080;
+      border-bottom: 2px solid;
+      border-color: #FFFFFF #808080 #808080 #FFFFFF;
+      padding: 3px 8px;
+      font-size: 11px;
+      color: #444;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .win98-statusbar .status-left {
+      display: flex;
+      gap: 12px;
+    }
+
+    .win98-statusbar .status-right {
+      color: #000080;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 720px) {
+      body { padding: 10px; }
+
+      .win98-content {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 6px;
+        margin-bottom: 8px;
+        min-height: 60px;
+      }
+
+      .sidebar-title {
+        width: 100%;
+        text-align: center;
+      }
+
+      .sidebar-asset-hint {
+        padding: 8px 0;
+      }
+
+      .canvas-wrapper {
+        padding: 0;
+        width: 100%;
+      }
+
+      #wallpaper-canvas {
+        width: 100%;
+        max-width: 375px;
+        height: auto;
+        aspect-ratio: 375 / 667;
+      }
+    }
+
+    /* ===== Scrollbar (Win98 style) ===== */
+    ::-webkit-scrollbar {
+      width: 16px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #C0C0C0;
+      border: 1px inset #808080;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #C0C0C0;
+      border: 1px solid;
+      border-color: #FFFFFF #808080 #808080 #FFFFFF;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== Main Window ===== -->
+  <div class="win98-window">
+
+    <!-- Title Bar -->
+    <div class="win98-titlebar">
+      <span class="title-text">Zoeye Wallpaper Builder</span>
+      <div class="win98-buttons">
+        <button title="Minimize">_</button>
+        <button title="Maximize">□</button>
+        <button class="btn-close" title="Close">✕</button>
+      </div>
+    </div>
+
+    <!-- Menu Bar -->
+    <div class="win98-menubar">
+      <span>File</span>
+      <span>Edit</span>
+      <span>View</span>
+      <span>Stickers</span>
+      <span>Help</span>
+    </div>
+
+    <!-- Main Content -->
+    <div class="win98-content">
+
+      <!-- Left Sidebar — Asset Library (future sticker tray) -->
+      <div class="sidebar" id="sticker-sidebar">
+        <div class="sidebar-title">📁 Asset Library</div>
+        <div class="sidebar-asset-hint">
+          <div class="hint-icon">📦</div>
+          <div>Drop stickers here</div>
+          <div style="font-size:10px; color:#aaa;">(Coming soon...)</div>
+        </div>
+        <!--
+          ============================================
+          TODO: Sticker thumbnails will be dynamically
+          inserted here via JavaScript.
+          Each sticker element should have:
+            class="sticker-item"
+            draggable="true"
+            data-sticker-id="..."
+            data-sticker-url="..."
+          ============================================
+        -->
+      </div>
+
+      <!-- Right Canvas -->
+      <div class="canvas-wrapper">
+        <div id="wallpaper-canvas">
+          <div class="canvas-pixel-hint"></div>
+          <!--
+            ============================================
+            TODO: Drag-and-drop stickers will be
+            appended here as absolutely positioned
+            <div> elements inside #wallpaper-canvas.
+
+            Example sticker element:
+              <div class="sticker"
+                   style="position:absolute; left:Xpx; top:Ypx;">
+                <img src="..." draggable="false">
+              </div>
+
+            Drag logic outline:
+              1. Listen for 'dragstart' on .sticker-item
+                 in the sidebar, store sticker data.
+              2. Listen for 'dragover' (preventDefault)
+                 on #wallpaper-canvas to allow drop.
+              3. Listen for 'drop' on #wallpaper-canvas,
+                 calculate position relative to canvas,
+                 create .sticker element, append it.
+              4. For repositioning: listen for mousedown
+                 on .sticker inside canvas, track mousemove
+                 to update left/top, mouseup to stop.
+            ============================================
+          -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Status Bar -->
+    <div class="win98-statusbar">
+      <div class="status-left">
+        <span>Canvas: 375 × 667</span>
+        <span>|</span>
+        <span>Items: 0</span>
+      </div>
+      <div class="status-right">Y2K ▸</div>
+    </div>
+
+  </div>
+
+  <!-- ==========================================
+       JavaScript — Stub for drag-and-drop stickers
+       ========================================== -->
+  <script>
+    (function() {
+      'use strict';
+
+      // ---- DOM references ----
+      const canvas = document.getElementById('wallpaper-canvas');
+      const sidebar = document.getElementById('sticker-sidebar');
+      const statusItems = document.querySelector('.win98-statusbar .status-left span:last-child');
+
+      let stickerCount = 0;
+
+      // ---- Update status bar ----
+      function updateStatus() {
+        if (statusItems) {
+          statusItems.textContent = 'Items: ' + stickerCount;
+        }
+      }
+
+      // ---- TODO: Load sticker assets ----
+      // function loadStickers(stickerList) {
+      //   stickerList.forEach(s => {
+      //     const el = document.createElement('div');
+      //     el.className = 'sticker-item';
+      //     el.draggable = true;
+      //     el.dataset.stickerId = s.id;
+      //     el.dataset.stickerUrl = s.url;
+      //     // ... render thumbnail, append to sidebar
+      //   });
+      // }
+
+      // ---- TODO: Drag start (sidebar → canvas) ----
+      // sidebar.addEventListener('dragstart', (e) => {
+      //   const item = e.target.closest('.sticker-item');
+      //   if (!item) return;
+      //   e.dataTransfer.setData('text/plain', JSON.stringify({
+      //     id: item.dataset.stickerId,
+      //     url: item.dataset.stickerUrl
+      //   }));
+      // });
+
+      // ---- TODO: Drag over (allow drop on canvas) ----
+      // canvas.addEventListener('dragover', (e) => {
+      //   e.preventDefault();
+      // });
+
+      // ---- TODO: Drop (place sticker on canvas) ----
+      // canvas.addEventListener('drop', (e) => {
+      //   e.preventDefault();
+      //   const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+      //   const rect = canvas.getBoundingClientRect();
+      //   const x = e.clientX - rect.left;
+      //   const y = e.clientY - rect.top;
+      //   // ... create sticker element at (x, y)
+      //   stickerCount++;
+      //   updateStatus();
+      // });
+
+      // ---- TODO: In-canvas drag to reposition ----
+      // let activeSticker = null;
+      // let offsetX = 0, offsetY = 0;
+      //
+      // canvas.addEventListener('mousedown', (e) => {
+      //   const sticker = e.target.closest('.sticker');
+      //   if (!sticker) return;
+      //   activeSticker = sticker;
+      //   const rect = sticker.getBoundingClientRect();
+      //   offsetX = e.clientX - rect.left;
+      //   offsetY = e.clientY - rect.top;
+      //   sticker.style.cursor = 'grabbing';
+      // });
+      //
+      // document.addEventListener('mousemove', (e) => {
+      //   if (!activeSticker) return;
+      //   const canvasRect = canvas.getBoundingClientRect();
+      //   let x = e.clientX - canvasRect.left - offsetX;
+      //   let y = e.clientY - canvasRect.top - offsetY;
+      //   activeSticker.style.left = x + 'px';
+      //   activeSticker.style.top = y + 'px';
+      // });
+      //
+      // document.addEventListener('mouseup', () => {
+      //   if (activeSticker) {
+      //     activeSticker.style.cursor = 'grab';
+      //     activeSticker = null;
+      //   }
+      // });
+
+      console.log('Zoeye Wallpaper Builder ready ✿');
+      console.log('Drop your sticker logic in the TODO sections above!');
+    })();
+  </script>
+
+</body>
+</html>
