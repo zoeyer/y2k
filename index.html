@@ -236,7 +236,8 @@ body{font-family:'VT323',monospace;background:#D4D0C8;display:flex;flex-directio
   <div class="middle">
     <div class="canvas-wrap" id="cWrap">
       <div class="canvas-cont" id="cCont">
-        <canvas id="mc"></canvas>
+        <canvas id="bgCanvas" style="position:absolute;top:0;left:0;"></canvas>
+        <canvas id="mc" style="position:absolute;top:0;left:0;"></canvas>
         <div id="symLine"></div>
         <div id="selBox"></div>
         <textarea id="textEl" rows="1"></textarea>
@@ -490,25 +491,34 @@ let isCropping=false;
 
 const canvas=document.getElementById('mc');
 const ctx=canvas.getContext('2d');
+const bgCanvas=document.getElementById('bgCanvas');
+const bgCtx=bgCanvas.getContext('2d');
 const cCont=document.getElementById('cCont');
 const cWrap=document.getElementById('cWrap');
 const selBox=document.getElementById('selBox');
 const symLine=document.getElementById('symLine');
 
-function applyT(){cCont.style.transform=`translate(${vX}px,${vY}px) scale(${vScale})`;}
+function applyT(){
+  cCont.style.transform=`translate(${vX}px,${vY}px) scale(${vScale})`;
+  cCont.style.width=cW+'px';
+  cCont.style.height=cH+'px';
+}
 function centerC(){
   const wW=cWrap.clientWidth,wH=cWrap.clientHeight;
   vScale=Math.min((wW-20)/cW,(wH-20)/cH,1);
   vX=(wW-cW*vScale)/2;vY=(wH-cH*vScale)/2;
   applyT();
-  symLine.style.height=cH*vScale+'px';
+  symLine.style.height=cH+'px';
 }
 
 function setCanvasSize(w,h){
   const tmp=document.createElement('canvas');tmp.width=canvas.width||w;tmp.height=canvas.height||h;
   if(canvas.width)tmp.getContext('2d').drawImage(canvas,0,0);
-  cW=w;cH=h;canvas.width=w;canvas.height=h;
-  applyBg(curBg,false);ctx.drawImage(tmp,0,0);
+  cW=w;cH=h;
+  canvas.width=w;canvas.height=h;
+  bgCanvas.width=w;bgCanvas.height=h;
+  applyBg(curBg,false);
+  ctx.drawImage(tmp,0,0);
   centerC();
   document.getElementById('stSize').textContent=w+'×'+h;
   document.getElementById('dimLbl').textContent=w+' × '+h+' px';
@@ -521,20 +531,24 @@ function redo(){if(histIdx>=hist.length-1)return;histIdx++;loadH(hist[histIdx]);
 function loadH(d){const img=new Image();img.onload=()=>{ctx.clearRect(0,0,cW,cH);ctx.drawImage(img,0,0);};img.src=d;}
 
 function applyBg(bg,save=true){
-  curBg=bg;ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
-  if(bg==='transparent'){ctx.clearRect(0,0,cW,cH);}
-  else if(bg.startsWith('linear')){
+  curBg=bg;
+  bgCtx.clearRect(0,0,cW,cH);
+  if(bg==='transparent'){
+    // leave bg transparent
+  } else if(bg.startsWith('linear')){
     const cs=bg.match(/#[0-9A-Fa-f]{6}/g)||['#FF00CC','#00FFEE'];
-    const g=ctx.createLinearGradient(0,0,cW,cH);g.addColorStop(0,cs[0]);g.addColorStop(1,cs[1]||cs[0]);
-    ctx.fillStyle=g;ctx.fillRect(0,0,cW,cH);
-  }else{ctx.fillStyle=bg;ctx.fillRect(0,0,cW,cH);}
-  ctx.restore();if(save)saveH();
+    const g=bgCtx.createLinearGradient(0,0,cW,cH);g.addColorStop(0,cs[0]);g.addColorStop(1,cs[1]||cs[0]);
+    bgCtx.fillStyle=g;bgCtx.fillRect(0,0,cW,cH);
+  }else{
+    bgCtx.fillStyle=bg;bgCtx.fillRect(0,0,cW,cH);
+  }
+  if(save)saveH();
 }
 
 document.getElementById('bgCPick').addEventListener('input',function(){document.querySelectorAll('.bgp').forEach(b=>b.classList.remove('active'));applyBg(this.value);});
 document.getElementById('bgUpload').addEventListener('change',function(){
   const f=this.files[0];if(!f)return;
-  const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.drawImage(img,0,0,cW,cH);ctx.restore();saveH();};img.src=e.target.result;};r.readAsDataURL(f);
+  const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{bgCtx.clearRect(0,0,cW,cH);bgCtx.drawImage(img,0,0,cW,cH);saveH();};img.src=e.target.result;};r.readAsDataURL(f);
 });
 document.getElementById('clearBg').addEventListener('click',()=>{document.querySelectorAll('.bgp').forEach(b=>b.classList.remove('active'));applyBg('transparent');});
 
@@ -621,7 +635,17 @@ function onMove(e){
     if(isPoly&&polyPts.length>0){ctx.putImageData(snap,0,0);ctx.save();ctx.globalAlpha=opac;ctx.strokeStyle=fgC;ctx.lineWidth=brushSz;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(polyPts[0].x,polyPts[0].y);polyPts.forEach(pt=>ctx.lineTo(pt.x,pt.y));ctx.lineTo(p.x,p.y);ctx.stroke();ctx.restore();}
     return;
   }
-  if(tool==='move'&&moveSnap){ctx.putImageData(moveSnap,0,0);const dx=p.x-sx,dy=p.y-sy;ctx.save();ctx.globalAlpha=1;ctx.drawImage(canvas,dx,dy);ctx.restore();return;}
+  if(tool==='move'&&moveSnap){
+    ctx.putImageData(moveSnap,0,0);
+    if(hasSel&&selW>0&&selH>0){
+      const dx=p.x-sx,dy=p.y-sy;
+      const tmp=document.createElement('canvas');tmp.width=cW;tmp.height=cH;
+      tmp.getContext('2d').putImageData(moveSnap,0,0);
+      ctx.clearRect(selX,selY,selW,selH);
+      ctx.save();ctx.drawImage(tmp,selX,selY,selW,selH,selX+dx,selY+dy,selW,selH);ctx.restore();
+    }
+    return;
+  }
   if(tool==='crop'&&cropStart){ctx.putImageData(snap,0,0);const x=Math.min(cropStart.x,p.x),y=Math.min(cropStart.y,p.y),w=Math.abs(p.x-cropStart.x),h=Math.abs(p.y-cropStart.y);ctx.save();ctx.setLineDash([5,5]);ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.strokeRect(x,y,w,h);ctx.setLineDash([]);ctx.restore();return;}
   if(tool==='select-free'){freePts.push({x:p.x,y:p.y});ctx.save();ctx.strokeStyle='#000';ctx.lineWidth=1/vScale;ctx.setLineDash([4/vScale,2/vScale]);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.setLineDash([]);ctx.restore();lx=p.x;ly=p.y;return;}
   
@@ -825,7 +849,7 @@ function applyFx(fx){
 function applyKernel(k){const src=ctx.getImageData(0,0,cW,cH),dst=ctx.createImageData(cW,cH);for(let y=1;y<cH-1;y++){for(let x=1;x<cW-1;x++){let r=0,g=0,b=0;for(let ky=-1;ky<=1;ky++){for(let kx=-1;kx<=1;kx++){const i=((y+ky)*cW+(x+kx))*4,ki=(ky+1)*3+(kx+1);r+=src.data[i]*k[ki];g+=src.data[i+1]*k[ki];b+=src.data[i+2]*k[ki];}}const di=(y*cW+x)*4;dst.data[di]=clamp(r);dst.data[di+1]=clamp(g);dst.data[di+2]=clamp(b);dst.data[di+3]=src.data[di+3];}}ctx.putImageData(dst,0,0);}
 
 // Gallery
-function saveToGallery(){commitText();gallery.push({name:'画作'+(gallery.length+1),dataURL:canvas.toDataURL('image/png'),id:Date.now()});renderGallery();toast('✅ 存入画栏 ('+gallery.length+'张)');}
+function saveToGallery(){commitText();gallery.push({name:'画作'+(gallery.length+1),dataURL:getMergedCanvas().toDataURL('image/png'),id:Date.now()});renderGallery();toast('✅ 存入画栏 ('+gallery.length+'张)');}
 function renderGallery(){
   const grid=document.getElementById('galGrid'),empty=document.getElementById('galEmpty');
   if(gallery.length===0){empty.style.display='';grid.style.display='none';return;}
@@ -855,13 +879,39 @@ document.getElementById('galExport').addEventListener('click',()=>{const sel=get
 document.getElementById('galOrder').addEventListener('click',()=>{const sel=getSelGal();if(!sel.length){toast('请先勾选图片');return;}document.getElementById('galOv').classList.remove('open');openOrder();});
 
 // Order
+let selGalItems=[];
 function openOrder(){
   const picker=document.getElementById('galPicker');
+  selGalItems=[];
   if(gallery.length===0){picker.innerHTML='<div style="font-size:12px;color:#888;grid-column:1/-1;text-align:center;padding:16px;">请先存入画栏</div>';}
-  else{picker.innerHTML='';gallery.forEach((item,idx)=>{const el=document.createElement('div');el.className='gpi';el.innerHTML=`<img src="${item.dataURL}"><div class="gpi-n">${item.name}</div>`;el.addEventListener('click',()=>{document.querySelectorAll('.gpi').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');selGalItem=item;document.getElementById('selThumb').src=item.dataURL;document.getElementById('selPrev').style.display='block';});picker.appendChild(el);});}
+  else{
+    picker.innerHTML='<div style="font-size:11px;color:#888;grid-column:1/-1;margin-bottom:4px;">可多选，长按或勾选</div>';
+    gallery.forEach((item,idx)=>{
+      const el=document.createElement('div');el.className='gpi';el.style.position='relative';
+      el.innerHTML=`<input type="checkbox" style="position:absolute;top:2px;left:2px;accent-color:#FF00CC;z-index:2;" data-idx="${idx}"><img src="${item.dataURL}"><div class="gpi-n">${item.name}</div>`;
+      const chk=el.querySelector('input');
+      chk.addEventListener('change',()=>{
+        if(chk.checked){el.classList.add('sel');if(!selGalItems.find(x=>x.id===item.id))selGalItems.push(item);}
+        else{el.classList.remove('sel');selGalItems=selGalItems.filter(x=>x.id!==item.id);}
+        updateSelPreview();
+      });
+      el.querySelector('img').addEventListener('click',()=>chk.click());
+      picker.appendChild(el);
+    });
+  }
   document.getElementById('step1').style.display='block';document.getElementById('step2').style.display='none';
-  selGalItem=null;document.getElementById('selPrev').style.display='none';
+  selGalItems=[];document.getElementById('selPrev').style.display='none';
   document.getElementById('orderMod').classList.add('open');
+}
+
+function updateSelPreview(){
+  if(selGalItems.length>0){
+    document.getElementById('selThumb').src=selGalItems[0].dataURL;
+    document.getElementById('selPrev').style.display='block';
+    document.querySelector('#selPrev div').textContent=`✅ 已选${selGalItems.length}张`;
+  } else {
+    document.getElementById('selPrev').style.display='none';
+  }
 }
 document.getElementById('orderBtn').addEventListener('click',openOrder);
 document.getElementById('fabOrder').addEventListener('click',openOrder);
@@ -869,9 +919,12 @@ document.getElementById('closeOrder').addEventListener('click',()=>document.getE
 document.querySelectorAll('.qb').forEach(b=>{b.addEventListener('click',()=>{document.querySelectorAll('.qb').forEach(x=>x.classList.remove('active'));b.classList.add('active');selQty=parseInt(b.dataset.qty);selPrice=parseInt(b.dataset.price);document.getElementById('pSum').textContent='合计：¥'+selPrice+'（'+selQty+'张）';});});
 document.getElementById('goPayBtn').addEventListener('click',()=>{
   const name=document.getElementById('oName').value.trim(),phone=document.getElementById('oPhone').value.trim(),addr=document.getElementById('oAddr').value.trim();
-  if(!selGalItem){toast('请先从画栏选择图片');return;}if(!name||!phone||!addr){toast('请填写姓名、手机号和地址');return;}
+  if(selGalItems.length===0){toast('请先从画栏选择图片');return;}
+  if(!name||!phone||!addr){toast('请填写姓名、手机号和地址');return;}
   const now=new Date();pendingONum='ZY-'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+String(Math.floor(Math.random()*9000)+1000);
-  document.getElementById('s2Num').textContent='订单号：'+pendingONum;document.getElementById('s2Price').textContent='¥'+selPrice+'（'+selQty+'张）';document.getElementById('s2Name').textContent=document.getElementById('oName').value.trim();
+  document.getElementById('s2Num').textContent='订单号：'+pendingONum;
+  document.getElementById('s2Price').textContent='¥'+selPrice+'（'+selQty+'张）共'+selGalItems.length+'款图案';
+  document.getElementById('s2Name').textContent=name;
   document.getElementById('step1').style.display='none';document.getElementById('step2').style.display='block';
 });
 document.getElementById('backBtn').addEventListener('click',()=>{document.getElementById('step1').style.display='block';document.getElementById('step2').style.display='none';});
@@ -879,30 +932,48 @@ window.swTab=function(tab){document.getElementById('qrAlipay').style.display=tab
 document.getElementById('submitOrder').addEventListener('click',()=>{
   const name=document.getElementById('oName').value.trim(),phone=document.getElementById('oPhone').value.trim(),addr=document.getElementById('oAddr').value.trim(),note=document.getElementById('oNote').value.trim();
   const btn=document.getElementById('submitOrder');btn.textContent='上传图片中...';btn.disabled=true;
-  const b64=selGalItem.dataURL.split(',')[1];const fd=new FormData();fd.append('key','cdf2f3b29c0a9681a99af6df57a8aecf');fd.append('image',b64);
-  fetch('https://api.imgbb.com/1/upload',{method:'POST',body:fd})
-    .then(r=>r.json()).then(data=>{
-      const imgUrl=data.success?data.data.url:'图片上传失败';btn.textContent='发送订单中...';
-      return emailjs.send('service_lbp5iwb','template_5wry0tq',{order_num:pendingONum,name,phone,address:addr,qty:selQty,price:'¥'+selPrice,note:note||'无',image_url:imgUrl});
-    }).then(()=>{
-      document.getElementById('succNum').textContent='订单号：'+pendingONum;
-      document.getElementById('orderMod').classList.remove('open');document.getElementById('succOv').classList.add('open');
-      btn.textContent='✅ 我已付款，提交订单';btn.disabled=false;selGalItem=null;
-    }).catch(err=>{toast('提交失败，请重试');btn.textContent='✅ 我已付款，提交订单';btn.disabled=false;console.error(err);});
+  // Upload all selected images
+  const uploadPromises=selGalItems.map(item=>{
+    const b64=item.dataURL.split(',')[1];const fd=new FormData();
+    fd.append('key','cdf2f3b29c0a9681a99af6df57a8aecf');fd.append('image',b64);
+    return fetch('https://api.imgbb.com/1/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>d.success?d.data.url:item.name+'上传失败');
+  });
+  Promise.all(uploadPromises).then(urls=>{
+    btn.textContent='发送订单中...';
+    const imgLinks=urls.map((url,i)=>`图案${i+1}：${url}`).join('\n');
+    return emailjs.send('service_lbp5iwb','template_5wry0tq',{
+      order_num:pendingONum,name,phone,address:addr,
+      qty:selQty,price:'¥'+selPrice,note:note||'无',
+      image_url:imgLinks
+    });
+  }).then(()=>{
+    document.getElementById('succNum').textContent='订单号：'+pendingONum;
+    document.getElementById('orderMod').classList.remove('open');document.getElementById('succOv').classList.add('open');
+    btn.textContent='✅ 我已付款，提交订单';btn.disabled=false;selGalItems=[];
+  }).catch(err=>{toast('提交失败，请重试');btn.textContent='✅ 我已付款，提交订单';btn.disabled=false;console.error(err);});
 });
 document.getElementById('closeSucc').addEventListener('click',()=>document.getElementById('succOv').classList.remove('open'));
 
+// Merge layers for export/save
+function getMergedCanvas(){
+  const merged=document.createElement('canvas');merged.width=cW;merged.height=cH;
+  const mc=merged.getContext('2d');
+  mc.drawImage(bgCanvas,0,0);
+  mc.drawImage(canvas,0,0);
+  return merged;
+}
+
 // Export
-document.getElementById('expWall').addEventListener('click',()=>{commitText();const a=document.createElement('a');a.download='zoeye-wallpaper.png';a.href=canvas.toDataURL('image/png');a.click();});
-document.getElementById('expSticker').addEventListener('click',()=>{commitText();const a=document.createElement('a');a.download='zoeye-sticker.png';a.href=canvas.toDataURL('image/png');a.click();});
+document.getElementById('expWall').addEventListener('click',()=>{commitText();const a=document.createElement('a');a.download='zoeye-wallpaper.png';a.href=getMergedCanvas().toDataURL('image/png');a.click();});
+document.getElementById('expSticker').addEventListener('click',()=>{commitText();const a=document.createElement('a');a.download='zoeye-sticker.png';a.href=getMergedCanvas().toDataURL('image/png');a.click();});
 
 // Menu + keyboard
 document.getElementById('miUndo').addEventListener('click',undo);document.getElementById('miRedo').addEventListener('click',redo);
-document.getElementById('miClear').addEventListener('click',()=>{if(confirm('清空画布？'))applyBg(curBg);});
+document.getElementById('miClear').addEventListener('click',()=>{if(confirm('清空画布？')){ctx.clearRect(0,0,cW,cH);saveH();}});
 document.getElementById('miCopy').addEventListener('click',()=>copySel(false));document.getElementById('miCut').addEventListener('click',()=>copySel(true));document.getElementById('miPaste').addEventListener('click',pasteSel);
 document.getElementById('miFlipH').addEventListener('click',flipH);document.getElementById('miFlipV').addEventListener('click',flipV);
 document.getElementById('undoBtn').addEventListener('click',undo);document.getElementById('redoBtn').addEventListener('click',redo);
-document.getElementById('clearBtn').addEventListener('click',()=>{if(confirm('清空画布？'))applyBg(curBg);});
+document.getElementById('clearBtn').addEventListener('click',()=>{if(confirm('清空画布？')){ctx.clearRect(0,0,cW,cH);saveH();}});
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
   if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();}
